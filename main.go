@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -15,17 +17,16 @@ import (
 var wg sync.WaitGroup
 
 func main() {
-	var target string
-	flag.StringVar(&target, "target", "N/A", "Target ip address")
-
 	var port string
 	flag.StringVar(&port, "port", "80,443", "Target ports")
 
 	flag.Parse()
 
-	for _, t := range strings.Split(target, ",") {
+	sc := bufio.NewScanner(os.Stdin)
+	for sc.Scan() {
+		domain := strings.ToLower(sc.Text())
 		wg.Add(1)
-		go portScan(t, port)
+		go portScan(domain, port)
 	}
 	wg.Wait()
 }
@@ -54,7 +55,11 @@ func portScan(target string, ports string) {
 		if len(host.Ports) == 0 || len(host.Addresses) == 0 {
 			continue
 		}
-		fmt.Printf("Host %q %s:\n", host.Addresses[0], host.Hostnames[0])
+		if len(host.Hostnames) == 0 {
+			fmt.Printf("Host %q:\n", host.Addresses[0])
+		} else {
+			fmt.Printf("Host %s %q:\n", host.Hostnames[0], host.Addresses[0])
+		}
 		for _, port := range host.Ports {
 			fmt.Printf("\tPort %d/%s %s %s %s\n", port.ID, port.Protocol, port.State, port.Service.Name, port.Service.ExtraInfo)
 		}
